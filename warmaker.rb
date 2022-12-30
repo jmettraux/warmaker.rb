@@ -20,8 +20,16 @@ opts.each do |o|
     end ] = true
 end
 
-O.fname = args.find { |a| a.match?(/\.war$/) } || 'ROOT.war'
+O.fname =
+  args.find { |a| a.match?(/\.war$/) } ||
+  'ROOT.war'
 args.delete(O.fname)
+
+O.conf =
+  args.find { |a| a.match?(/\.ya?ml$/) } ||
+  File.join(__dir__, 'warmaker.yaml')
+args.delete(O.conf)
+O.conf = YAML.load(File.read(O.conf))
 
 O.root = File.absolute_path(args.shift || '.')
 O.root = nil unless File.directory?(O.root)
@@ -108,30 +116,7 @@ def mkdir(path)
 end
 
 
-#
-# make dirs
+# TODO mix conf
 
-mkdir(O.tmp_dir)
-mkdir(O.tpath('META-INF'))
-mkdir(O.tpath('WEB-INF'))
-
-
-#
-# copy public/ files
-
-#Dir[O.path('public/**/*')].each do |pa|
-#  copy(pa, '.')
-#end
-#copy_r(O.glob('public/**/*'), '.')
-
-
-#
-# remove test/ and spec/ subdirs from gems
-
-# TODO
-
-#
-# remove .rdoc and .md files from gems
-
-# TODO
+pp O.conf
 
