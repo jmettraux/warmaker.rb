@@ -23,16 +23,20 @@ end
 O.fname = args.find { |a| a.match?(/\.war$/) } || 'ROOT.war'
 args.delete(O.fname)
 
-O.root = File.absolute_path(args.first || '.')
+O.root = File.absolute_path(args.shift || '.')
 O.root = nil unless File.directory?(O.root)
 
-O.tmp_dir = File.join(O.root, "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
+O.tmp_dir =
+  args.shift ||
+  File.join(O.root, "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
+O.tmp_dir =
+  File.absolute_path(O.tmp_dir)
 
 
 if O.help? || O.root.nil?
 
   puts
-  puts "ruby warmaker.rb [options] [fname.war|ROOT.war] [root|.]"
+  puts "ruby warmaker.rb [options] [fname.war|ROOT.war] [root|.] [tmp_dir]"
   puts
   puts "options:"
   puts "  --dry         : runs dry, not archive creation"
@@ -82,13 +86,21 @@ class << O
 
     pa1[self.tmp_dir.length + 1..-1]
   end
+
+  #def glob(pa)
+  #  Dir.glob(self.full_path(pa))
+  #end
 end
 
 def copy(path, target_dir)
 
-  #puts ". copy  #{path} to #{target_dir}"
-  puts ". copy  #{O.short_path(path)} to #{target_dir}"
+  #puts ". copy   #{path} to #{target_dir}"
+  puts ". copy   #{O.short_path(path)} to #{target_dir}"
 end
+
+#def copy_r(path, target_dir)
+#  puts ".copy_r  #{path} to #{target_dir}"
+#end
 
 def mkdir(path)
 
@@ -97,18 +109,20 @@ end
 
 
 #
-# make tmp_dir
+# make dirs
 
 mkdir(O.tmp_dir)
+mkdir(O.tpath('META-INF'))
+mkdir(O.tpath('WEB-INF'))
 
 
 #
-# copy .html files
+# copy public/ files
 
-Dir[O.path('public/*.html')].each do |pa|
-
-  copy(pa, O.tpath('.'))
-end
+#Dir[O.path('public/**/*')].each do |pa|
+#  copy(pa, '.')
+#end
+#copy_r(O.glob('public/**/*'), '.')
 
 
 #
