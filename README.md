@@ -1,7 +1,7 @@
 
 # warmaker.rb
 
-Small alternative to warble.
+`.war` file packager for my Rack based JRuby apps.
 
 
 ## LICENSE
