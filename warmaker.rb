@@ -26,6 +26,8 @@ args.delete(O.fname)
 O.root = args.first || '.'
 O.root = nil unless File.directory?(O.root)
 
+O.tmp_dir = File.join(O.root, "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
+
 
 if O.help? || O.root.nil?
 
@@ -48,9 +50,39 @@ if O.version?
   exit 0
 end
 
+class << O
 
+  def path(pa)
 
-#tmpdir = File.
+    File.join(self.root, pa)
+  end
 
-#FileUtils.mkdir_f('
+  def tpath(pa)
+
+    File.join(self.tmp_dir, pa)
+  end
+end
+
+def copy(path, target_dir)
+
+  puts ". copy  #{path} to #{target_dir}"
+end
+
+def mkdir(path)
+
+  puts ". mdkir  #{path}"
+end
+
+#
+# make tmp_dir
+
+# TODO
+
+#
+# copy .html files
+
+Dir[O.path('public/*.html')].each do |pa|
+
+  copy(pa, O.tpath('.'))
+end
 
