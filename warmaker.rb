@@ -23,7 +23,7 @@ end
 O.fname = args.find { |a| a.match?(/\.war$/) } || 'ROOT.war'
 args.delete(O.fname)
 
-O.root = args.first || '.'
+O.root = File.absolute_path(args.first || '.')
 O.root = nil unless File.directory?(O.root)
 
 O.tmp_dir = File.join(O.root, "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
@@ -50,6 +50,10 @@ if O.version?
   exit 0
 end
 
+
+#
+# do it...
+
 class << O
 
   def path(pa)
@@ -61,11 +65,29 @@ class << O
 
     File.join(self.tmp_dir, pa)
   end
+
+  alias full_path path
+  alias full_tpath tpath
+
+  def short_path(pa)
+
+    pa1 = pa.match?(/^\//) ? pa : self.path(pa)
+
+    pa1[self.root.length + 1..-1]
+  end
+
+  def short_tpath(pa)
+
+    pa1 = pa.match?(/^\//) ? pa : self.tpath(pa)
+
+    pa1[self.tmp_dir.length + 1..-1]
+  end
 end
 
 def copy(path, target_dir)
 
-  puts ". copy  #{path} to #{target_dir}"
+  #puts ". copy  #{path} to #{target_dir}"
+  puts ". copy  #{O.short_path(path)} to #{target_dir}"
 end
 
 def mkdir(path)
@@ -73,10 +95,12 @@ def mkdir(path)
   puts ". mdkir  #{path}"
 end
 
+
 #
 # make tmp_dir
 
-# TODO
+mkdir(O.tmp_dir)
+
 
 #
 # copy .html files
@@ -85,4 +109,15 @@ Dir[O.path('public/*.html')].each do |pa|
 
   copy(pa, O.tpath('.'))
 end
+
+
+#
+# remove test/ and spec/ subdirs from gems
+
+# TODO
+
+#
+# remove .rdoc and .md files from gems
+
+# TODO
 
