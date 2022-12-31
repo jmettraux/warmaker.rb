@@ -1,6 +1,11 @@
 ---
+
+#tmpdir: tmp_warmaker
+
 mkdir:
 - META-INF
 - WEB-INF
+
 copy_r:
 - public
+
