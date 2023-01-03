@@ -7,5 +7,5 @@ mkdir:
 - WEB-INF
 
 copy_r:
-- public
+  public: .
 

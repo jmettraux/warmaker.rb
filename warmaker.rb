@@ -26,6 +26,15 @@ if ARGV.include?('-v') || ARGV.include?('--version')
   exit 0
 end
 
+module C; class << self
+  def reset(s=nil); s ? "[0;0m#{s}[0;0m" : "[0;0m"; end
+  def green(s=nil); s ? "[32m#{s}[0;0m" : "[32m"; end
+  def dark_gray(s=nil); s ? "[90m#{s}[0;0m" : "[90m"; end
+  alias gn green
+  alias dg dark_gray
+  alias gray dark_gray
+end; end
+
 require 'yaml'
 require 'ostruct'
 require 'fileutils'
@@ -61,29 +70,75 @@ okeys.each do |k0, k1|
   y["#{k1}?"] = true if opts.include?(k0)
 end
 
+y['dry?'] = true if ENV['DRY']
+
+
 O = OpenStruct.new(y)
+
+wname = args.find { |a| a.match?(/\.war$/) }; args.delete(wname)
+O.fname = File.absolute_path(
+  wname || O.fname || 'root.war')
+
+O.rootdir = File.absolute_path(
+  args.shift || O.rootdir || O.root || '.')
+
+O.tmpdir = File.absolute_path(
+  args.shift || O.tmpdir || "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
+
+
+class String
+
+  def absolute?; self.match?(/^\//); end
+end
 
 class << O
 
-  def abs(path)
+  def tpath(pa)
 
-    path.match?(/^\//) ?
-      path :
-      File.absolute_path(File.join(self.root, path))
+    pa.absolute? ? pa : File.join(O.tmpdir, pa)
+  end
+
+  def rpath(pa)
+
+    pa.absolute? ? pa : File.join(O.rootdir, pa)
+  end
+
+  def relpath(pa)
+
+    pa[O.rootdir.length + 1..-1]
+  end
+
+  def mkdir!(pa)
+
+    d = self.tpath(pa)
+    FileUtils.mkdir_p(d) unless self.dry?
+    puts "  #{C.green}. mkdir  #{C.gray}#{d}#{C.reset}"
+  end
+
+  def copy_dir!(pa)
+
+    Dir[File.join(self.rpath(pa), '*')].each do |pa1|
+      if File.directory?(pa1)
+        p [ :dir, pa1, self.relpath(pa1) ]
+      else
+        p pa1
+      end
+    end
   end
 end
 
-wname = args.find { |a| a.match?(/\.war$/) }; args.delete(wname)
-O.fname = File.absolute_path(wname || O.fname || 'root.war')
-
-O.root = File.absolute_path(args.shift || O.root || '.')
-
-O.tmpdir = O.abs(
-  args.shift ||
-  O.tmpdir ||
-  "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
-
 p O
+
+O.mkdir!(O.tmpdir)
+  #
+O.mkdir.each do |path|
+  O.mkdir!(path)
+end
+
+O.copy_r.each do |path|
+  O.copy_dir!(path)
+end
+
 
 #class << O
 #
