@@ -90,6 +90,9 @@ class String
 
   def absolute?; self.match?(/^\//); end
   def absolute; File.absolute_path(self); end
+
+  def homepath; '~' + self.absolute[Dir.home.length..-1]; end
+  alias hp homepath
 end
 
 class << O
@@ -113,7 +116,7 @@ class << O
 
     d = self.tpath(pa)
     FileUtils.mkdir_p(d) unless self.dry?
-    puts "  #{C.green}. mkdir  #{C.gray}#{d}#{C.reset}"
+    puts "  #{C.green}. mkdir  #{C.gray(d.hp)}"
   end
 
   def copy!(source, target)
@@ -121,7 +124,7 @@ class << O
     target = target + '/' unless target.match?(/\/$/)
 
     FileUtils.copy(source, target) unless self.dry?
-    puts "  #{C.green}. cp     #{C.gray(source)} --> #{C.gray(target)}"
+    puts "  #{C.green}. cp     #{C.gray(source.hp)} --> #{C.gray(target.hp)}"
   end
 
   def copy_dir!(source, target)
