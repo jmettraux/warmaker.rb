@@ -1,7 +1,7 @@
 
 clean:
 	rm -fR war_*
-	rm *.war
+	rm -f *.war
 
 
 .PHONY: clean

@@ -61,7 +61,7 @@ y1 = YAML.load_file(y1) if y1
   end
 end
 
-okeys = { 'd' => 'dry', 'm' => 'mute' }
+okeys = { 'd' => 'dry', 'm' => 'mute', 'nj' => 'nojar' }
 okeys.dup.each { |_, k1| okeys[k1] = k1 }
   #
 okeys.each do |k0, k1|
@@ -73,6 +73,7 @@ end
 
 y['dry?'] = true if ENV['DRY']
 y['mute?'] = true if ENV['MUTE']
+y['nojar?'] = true if ENV['NOJAR']
 
 
 O = OpenStruct.new(y)
@@ -90,7 +91,8 @@ O.tmpdir = File.absolute_path(
 
 def echo(s)
 
-  puts(s) unless O.mute?
+  return if O.mute?
+  print C.green; puts s
 end
 
 
@@ -102,7 +104,14 @@ class String
   def homepath; '~' + self.absolute[Dir.home.length..-1]; end
   alias hpath homepath
 
-  def tpath; (self.absolute[O.tmpdir.length + 1..-1] || '.') + '/'; end
+  def tpath
+    tp = self.absolute[O.tmpdir.length + 1..-1] || '.'
+    if File.exist?(self)
+      tp + (File.directory?(self) ? '/' : '')
+    else
+      tp + '/'
+    end
+  end
 end
 
 class << O
@@ -121,7 +130,7 @@ class << O
 
     d = self.tpath(pa)
     FileUtils.mkdir_p(d) unless self.dry?
-    echo "  #{C.green}. mkdir  #{C.gray(d.hpath)}"
+    echo "  . mkdir  #{C.gray(d.hpath)}"
   end
 
   def copy!(source, target)
@@ -129,7 +138,7 @@ class << O
     target = target + '/' unless target.match?(/\/$/)
 
     FileUtils.copy(source, target) unless self.dry?
-    echo "    #{C.green}. cp     #{C.gray(source.hpath)} --> #{C.gray(target.tpath)}"
+    echo "    . cp     #{C.gray(source.hpath)} --> #{C.gray(target.tpath)}"
   end
 
   def copy_dir!(source, target)
@@ -151,16 +160,26 @@ class << O
 
   def jar!
 
-    c = "jar -cvf #{O.rootdir} #{O.fname}"
+    return if self.nojar?
+
+    c = "jar --create --file #{O.fname} -C #{O.tmpdir} ."
     system(c) unless self.dry?
-    echo "#{C.green}. #{c}"
+    echo ". #{c}"
   end
 end
 
-p O
 
 O.mkdir!(O.tmpdir)
+O.mkdir!(O.tpath('META-INF'))
+
+manipath = O.tpath('META-INF/MANIFEST.MF')
   #
+File.open(manipath, 'wb') do |f|
+  f.puts "Manifest-Version: 1.0"
+  f.puts "Created-By: warmaker.rb #{VERSION}"
+end
+echo "  . wrote  #{C.gray(manipath.tpath)}"
+
 O.mkdir.each do |path|
   O.mkdir!(path)
 end
