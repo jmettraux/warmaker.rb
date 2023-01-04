@@ -11,6 +11,7 @@ def print_usage
   puts
   puts "options:"
   puts "  --dry         : runs dry, not archive creation"
+  puts "  --mute        : runs silently"
   puts "  -v|--version  : displays the warmaker version (#{VERSION})"
   puts "  -h|--help     : displays this help information"
   puts
@@ -60,7 +61,7 @@ y1 = YAML.load_file(y1) if y1
   end
 end
 
-okeys = { 'd' => 'dry', }
+okeys = { 'd' => 'dry', 'm' => 'mute' }
 okeys.dup.each { |_, k1| okeys[k1] = k1 }
   #
 okeys.each do |k0, k1|
@@ -71,6 +72,7 @@ okeys.each do |k0, k1|
 end
 
 y['dry?'] = true if ENV['DRY']
+y['mute?'] = true if ENV['MUTE']
 
 
 O = OpenStruct.new(y)
@@ -86,13 +88,21 @@ O.tmpdir = File.absolute_path(
   args.shift || O.tmpdir || "war_#{Time.now.strftime('%Y%m%d_%H%M')}")
 
 
+def echo(s)
+
+  puts(s) unless O.mute?
+end
+
+
 class String
 
   def absolute?; self.match?(/^\//); end
   def absolute; File.absolute_path(self); end
 
   def homepath; '~' + self.absolute[Dir.home.length..-1]; end
-  alias hp homepath
+  alias hpath homepath
+
+  def tpath; (self.absolute[O.tmpdir.length + 1..-1] || '.') + '/'; end
 end
 
 class << O
@@ -107,16 +117,11 @@ class << O
     pa.absolute? ? pa : File.join(O.rootdir, pa).absolute
   end
 
-  def relpath(pa)
-
-    pa[O.rootdir.length + 1..-1]
-  end
-
   def mkdir!(pa)
 
     d = self.tpath(pa)
     FileUtils.mkdir_p(d) unless self.dry?
-    puts "  #{C.green}. mkdir  #{C.gray(d.hp)}"
+    echo "  #{C.green}. mkdir  #{C.gray(d.hpath)}"
   end
 
   def copy!(source, target)
@@ -124,7 +129,7 @@ class << O
     target = target + '/' unless target.match?(/\/$/)
 
     FileUtils.copy(source, target) unless self.dry?
-    puts "  #{C.green}. cp     #{C.gray(source.hp)} --> #{C.gray(target.hp)}"
+    echo "    #{C.green}. cp     #{C.gray(source.hpath)} --> #{C.gray(target.tpath)}"
   end
 
   def copy_dir!(source, target)
@@ -146,7 +151,7 @@ class << O
 
   def jar!
 
-    puts "#{C.green}. jar cvf ... TODO"
+    echo "#{C.green}. jar cvf ... TODO"
   end
 end
 
@@ -163,53 +168,4 @@ O.copy_r.each do |source, target|
 end
 
 O.jar!
-
-
-#class << O
-#
-##  def path(pa)
-##
-##    File.join(self.root, pa)
-##  end
-##
-##  def tpath(pa)
-##
-##    File.join(self.tmp_dir, pa)
-##  end
-##
-##  alias full_path path
-##  alias full_tpath tpath
-##
-##  def short_path(pa)
-##
-##    pa1 = pa.match?(/^\//) ? pa : self.path(pa)
-##
-##    pa1[self.root.length + 1..-1]
-##  end
-##
-##  def short_tpath(pa)
-##
-##    pa1 = pa.match?(/^\//) ? pa : self.tpath(pa)
-##
-##    pa1[self.tmp_dir.length + 1..-1]
-##  end
-##
-#  #def glob(pa)
-#  #  Dir.glob(self.full_path(pa))
-#  #end
-#end
-#
-##def copy(path, target_dir)
-##  #puts ". copy   #{path} to #{target_dir}"
-##  puts ". copy   #{O.short_path(path)} to #{target_dir}"
-##end
-#
-##def copy_r(path, target_dir)
-##  puts ".copy_r  #{path} to #{target_dir}"
-##end
-#
-##def mkdir(path)
-##
-##  puts ". mdkir  #{path}"
-##end
 
