@@ -7,4 +7,6 @@ mkdir:
 
 copy_r:
   public: .
+  exclude!:
+    - test/
 

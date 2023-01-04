@@ -112,6 +112,11 @@ class String
       tp + '/'
     end
   end
+
+  def same_path?(s)
+
+    self.absolute == s.absolute
+  end
 end
 
 class << O
@@ -141,20 +146,34 @@ class << O
     echo "    . cp     #{C.gray(source.hpath)} --> #{C.gray(target.tpath)}"
   end
 
-  def copy_dir!(source, target)
+  def copy_dir!(source, target, opts={})
 
     sc = self.rpath(source)
     ta = self.tpath(target)
+    ex = (opts[:exclude] || []).collect { |e| File.join(sc, e) }
 
     self.mkdir!(ta)
 
     Dir.glob(File.join(sc, '*')).each do |pa1|
+
+      next if ex.find { |e| pa1.same_path?(e) }
+
       if File.directory?(pa1)
         tdir = File.join(ta, pa1[sc.length + 1..-1])
         self.copy_dir!(pa1, tdir)
       else
         self.copy!(pa1, ta)
       end
+    end
+  end
+
+  def copy_r!
+
+    ex = O.copy_r['exclude!']
+
+    O.copy_r.each do |source, target|
+      next if source.match?(/!$/)
+      copy_dir!(source, target, exclude: ex)
     end
   end
 
@@ -177,16 +196,14 @@ manipath = O.tpath('META-INF/MANIFEST.MF')
 File.open(manipath, 'wb') do |f|
   f.puts "Manifest-Version: 1.0"
   f.puts "Created-By: warmaker.rb #{VERSION}"
-end
+end unless O.dry?
 echo "  . wrote  #{C.gray(manipath.tpath)}"
 
 O.mkdir.each do |path|
   O.mkdir!(path)
 end
 
-O.copy_r.each do |source, target|
-  O.copy_dir!(source, target)
-end
+O.copy_r!
 
 O.jar!
 
