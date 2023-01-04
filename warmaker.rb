@@ -151,7 +151,9 @@ class << O
 
   def jar!
 
-    echo "#{C.green}. jar cvf ... TODO"
+    c = "jar -cvf #{O.rootdir} #{O.fname}"
+    system(c) unless self.dry?
+    echo "#{C.green}. #{c}"
   end
 end
 
