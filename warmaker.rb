@@ -77,30 +77,31 @@ O = OpenStruct.new(y)
 
 wname = args.find { |a| a.match?(/\.war$/) }; args.delete(wname)
 O.fname = File.absolute_path(
-  wname || O.fname || 'root.war')
+  wname || O.fname || 'ROOT.war')
 
 O.rootdir = File.absolute_path(
   args.shift || O.rootdir || O.root || '.')
 
 O.tmpdir = File.absolute_path(
-  args.shift || O.tmpdir || "warmaker_#{Time.now.strftime('%Y%m%d_%H%M%S')}")
+  args.shift || O.tmpdir || "war_#{Time.now.strftime('%Y%m%d_%H%M')}")
 
 
 class String
 
   def absolute?; self.match?(/^\//); end
+  def absolute; File.absolute_path(self); end
 end
 
 class << O
 
   def tpath(pa)
 
-    pa.absolute? ? pa : File.join(O.tmpdir, pa)
+    pa.absolute? ? pa : File.join(O.tmpdir, pa).absolute
   end
 
   def rpath(pa)
 
-    pa.absolute? ? pa : File.join(O.rootdir, pa)
+    pa.absolute? ? pa : File.join(O.rootdir, pa).absolute
   end
 
   def relpath(pa)
@@ -115,15 +116,34 @@ class << O
     puts "  #{C.green}. mkdir  #{C.gray}#{d}#{C.reset}"
   end
 
-  def copy_dir!(pa)
+  def copy!(source, target)
 
-    Dir[File.join(self.rpath(pa), '*')].each do |pa1|
+    target = target + '/' unless target.match?(/\/$/)
+
+    FileUtils.copy(source, target) unless self.dry?
+    puts "  #{C.green}. cp     #{C.gray(source)} --> #{C.gray(target)}"
+  end
+
+  def copy_dir!(source, target)
+
+    sc = self.rpath(source)
+    ta = self.tpath(target)
+
+    self.mkdir!(ta)
+
+    Dir.glob(File.join(sc, '*')).each do |pa1|
       if File.directory?(pa1)
-        p [ :dir, pa1, self.relpath(pa1) ]
+        tdir = File.join(ta, pa1[sc.length + 1..-1])
+        self.copy_dir!(pa1, tdir)
       else
-        p pa1
+        self.copy!(pa1, ta)
       end
     end
+  end
+
+  def jar!
+
+    puts "#{C.green}. jar cvf ... TODO"
   end
 end
 
@@ -135,9 +155,11 @@ O.mkdir.each do |path|
   O.mkdir!(path)
 end
 
-O.copy_r.each do |path|
-  O.copy_dir!(path)
+O.copy_r.each do |source, target|
+  O.copy_dir!(source, target)
 end
+
+O.jar!
 
 
 #class << O
