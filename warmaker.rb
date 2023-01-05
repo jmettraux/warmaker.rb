@@ -177,11 +177,23 @@ class << O
     end
   end
 
+  def manifest!
+
+    pa = self.tpath('META-INF/MANIFEST.MF')
+
+    File.open(pa, 'wb') do |f|
+      f.puts "Manifest-Version: 1.0"
+      f.puts "Created-By: warmaker.rb #{VERSION}"
+    end unless self.dry?
+
+    echo "  . wrote  #{C.gray(pa.tpath)}"
+  end
+
   def jar!
 
     return if self.nojar?
 
-    c = "jar --create --file #{O.fname} -C #{O.tmpdir} ."
+    c = "jar --create --file #{self.fname} -C #{self.tmpdir} ."
     system(c) unless self.dry?
     echo ". #{c}"
   end
@@ -191,19 +203,12 @@ end
 O.mkdir!(O.tmpdir)
 O.mkdir!(O.tpath('META-INF'))
 
-manipath = O.tpath('META-INF/MANIFEST.MF')
-  #
-File.open(manipath, 'wb') do |f|
-  f.puts "Manifest-Version: 1.0"
-  f.puts "Created-By: warmaker.rb #{VERSION}"
-end unless O.dry?
-echo "  . wrote  #{C.gray(manipath.tpath)}"
-
 O.mkdir.each do |path|
   O.mkdir!(path)
 end
 
 O.copy_r!
 
+O.manifest!
 O.jar!
 
