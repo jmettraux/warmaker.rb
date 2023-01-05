@@ -76,7 +76,7 @@ O.tmpdir = File.absolute_path(
 def echo(s)
 
   return if O.mute?
-  print C.green; puts s
+  print C.green; print s; puts C.reset
 end
 
 
@@ -118,16 +118,37 @@ class << O
   def mkdir!(pa)
 
     d = self.tpath(pa)
+
+    return if File.exist?(d)
+
     FileUtils.mkdir_p(d) unless self.dry?
+
     echo "  . mkdir  #{C.gray(d.hpath)}"
   end
 
-  def copy!(source, target)
+  def copy_file!(source, target, opts={})
 
-    target = target + '/' unless target.match?(/\/$/)
+    sc = self.rpath(source)
+    ta = self.tpath(target)
 
-    FileUtils.copy(source, target) unless self.dry?
-    echo "    . cp     #{C.gray(source.hpath)} --> #{C.gray(target.tpath)}"
+    self.mkdir!(ta)
+
+    ta = ta + '/' unless ta.match?(/\/$/)
+
+    if ! File.exist?(sc) && opts[:soft]
+
+      echo "#{C.gray}    . cp     #{sc.hpath} --> #{ta.tpath}"
+    else
+
+      FileUtils.copy(sc, ta) unless self.dry?
+
+      echo "    . cp     #{C.gray(sc.hpath)} --> #{C.gray(ta.tpath)}"
+    end
+  end
+
+  def copy_file?(source, target, opts={})
+
+    self.copy_file!(source, target, opts.merge(soft: true))
   end
 
   def copy_dir!(source, target, opts={})
@@ -135,8 +156,6 @@ class << O
     sc = self.rpath(source)
     ta = self.tpath(target)
     ex = (opts[:exclude] || []).collect { |e| File.join(sc, e) }
-
-    self.mkdir!(ta)
 
     Dir.glob(File.join(sc, '*')).each do |pa1|
 
@@ -146,7 +165,7 @@ class << O
         tdir = File.join(ta, pa1[sc.length + 1..-1])
         self.copy_dir!(pa1, tdir)
       else
-        self.copy!(pa1, ta)
+        self.copy_file!(pa1, ta)
       end
     end
   end
@@ -155,10 +174,15 @@ class << O
 
     pa = self.tpath('META-INF/MANIFEST.MF')
 
-    File.open(pa, 'wb') do |f|
-      f.puts "Manifest-Version: 1.0"
-      f.puts "Created-By: warmaker.rb #{VERSION}"
-    end unless self.dry?
+    unless self.dry?
+
+      self.mkdir!('META-INF')
+
+      File.open(pa, 'wb') do |f|
+        f.puts "Manifest-Version: 1.0"
+        f.puts "Created-By: warmaker.rb #{VERSION}"
+      end
+    end
 
     echo "  . wrote  #{C.gray(pa.tpath)}"
   end
@@ -180,9 +204,14 @@ end
 O.mkdir!(O.tmpdir)
 
 O.mkdir!('WEB-INF')
-O.mkdir!('META-INF')
 
-O.copy_dir!('public', '.', exclude: %w[ test/ ])
+#O.copy_dir!('public', '.', exclude: %w[ test/ ])
+
+O.copy_file!('Gemfile', 'WEB-INF')
+O.copy_file!('Gemfile.lock', 'WEB-INF')
+O.copy_file?('VERSION.txt', 'WEB-INF')
+O.copy_file?('MIGLEVEL.txt', 'WEB-INF')
+O.copy_file!(__FILE__.absolute, 'WEB-INF/config')
 
 O.manifest!
 O.jar!
