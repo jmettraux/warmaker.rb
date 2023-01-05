@@ -207,11 +207,23 @@ O.mkdir!('WEB-INF')
 
 #O.copy_dir!('public', '.', exclude: %w[ test/ ])
 
-O.copy_file!('Gemfile', 'WEB-INF')
-O.copy_file!('Gemfile.lock', 'WEB-INF')
-O.copy_file?('VERSION.txt', 'WEB-INF')
-O.copy_file?('MIGLEVEL.txt', 'WEB-INF')
-O.copy_file!(__FILE__.absolute, 'WEB-INF/config')
+O.copy_file!('webinf/web.xml', 'WEB-INF/')
+
+O.copy_file!('Gemfile', 'WEB-INF/')
+O.copy_file!('Gemfile.lock', 'WEB-INF/')
+O.copy_file?('VERSION.txt', 'WEB-INF/')
+O.copy_file?('MIGLEVEL.txt', 'WEB-INF/')
+O.copy_file!(__FILE__.absolute, 'WEB-INF/config/')
+
+#O.copy_dir!('app', 'WEB-INF/app/')
+O.copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
+
+O.copy_dir!('lib', 'WEB-INF/lib/')
+
+O.copy_dir!('flor', 'WEB-INF/flor/') # too specific...
+
+# [ ] gems/
+# [ ] gems/ cleanup
 
 O.manifest!
 O.jar!
