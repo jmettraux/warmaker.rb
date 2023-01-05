@@ -10,10 +10,11 @@ def print_usage
   puts "ruby warmaker.rb [options] [fname.war|ROOT.war] [root|.] [tmp_dir]"
   puts
   puts "options:"
-  puts "  --dry         : runs dry, not archive creation"
-  puts "  --mute        : runs silently"
-  puts "  -v|--version  : displays the warmaker version (#{VERSION})"
-  puts "  -h|--help     : displays this help information"
+  puts "  --dry            : runs dry, not archive creation"
+  puts "  --mute           : runs silently"
+  puts "  --nojar|--nowar  : does not create .war in the end"
+  puts "  -v|--version     : displays the warmaker version (#{VERSION})"
+  puts "  -h|--help        : displays this help information"
   puts
 end
 
@@ -36,47 +37,30 @@ module C; class << self
   alias gray dark_gray
 end; end
 
-require 'yaml'
 require 'ostruct'
 require 'fileutils'
 
 opts, args = ARGV.partition { |a| a.match?(/^-/) }
 opts = opts.collect { |o| o.sub(/^-{1,2}/, '') }
 
-y = YAML.load_file(File.join(__dir__, 'warmaker.yaml'))
-
-y1 = args.find { |a| a.match?(/\.ya?ml$/) }; args.delete(y1)
-y1 = YAML.load_file(y1) if y1
-
-(y1 || {}).each do |k, v|
-  if k.match?(/!$/)
-    y[k[0..-2]] = v
-  else
-    v0 = y[k]
-    case [ v0.class, v.class ]
-    when [ Hash, Hash ] then v0.merge(v)
-    when [ Array, Array ] then v0.append(*v)
-    else y[k] = v
-    end
-  end
-end
+h = {}
 
 okeys = { 'd' => 'dry', 'm' => 'mute', 'nj' => 'nojar' }
 okeys.dup.each { |_, k1| okeys[k1] = k1 }
   #
 okeys.each do |k0, k1|
-  y["#{k1}?"] = y[k0]
+  h["#{k1}?"] = h[k0]
 end
 okeys.each do |k0, k1|
-  y["#{k1}?"] = true if opts.include?(k0)
+  h["#{k1}?"] = true if opts.include?(k0)
 end
 
-y['dry?'] = true if ENV['DRY']
-y['mute?'] = true if ENV['MUTE']
-y['nojar?'] = true if ENV['NOJAR']
+h['dry?'] = true if ENV['DRY']
+h['mute?'] = true if ENV['MUTE']
+h['nojar?'] = true if ENV['NOJAR']
 
 
-O = OpenStruct.new(y)
+O = OpenStruct.new(h)
 
 wname = args.find { |a| a.match?(/\.war$/) }; args.delete(wname)
 O.fname = File.absolute_path(
@@ -167,16 +151,6 @@ class << O
     end
   end
 
-  def copy_r!
-
-    ex = O.copy_r['exclude!']
-
-    O.copy_r.each do |source, target|
-      next if source.match?(/!$/)
-      copy_dir!(source, target, exclude: ex)
-    end
-  end
-
   def manifest!
 
     pa = self.tpath('META-INF/MANIFEST.MF')
@@ -200,14 +174,15 @@ class << O
 end
 
 
+#
+# make the .war
+
 O.mkdir!(O.tmpdir)
-O.mkdir!(O.tpath('META-INF'))
 
-O.mkdir.each do |path|
-  O.mkdir!(path)
-end
+O.mkdir!('WEB-INF')
+O.mkdir!('META-INF')
 
-O.copy_r!
+O.copy_dir!('public', '.', exclude: %w[ test/ ])
 
 O.manifest!
 O.jar!
