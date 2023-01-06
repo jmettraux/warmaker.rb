@@ -170,6 +170,55 @@ class << O
     end
   end
 
+  def jruby_version
+
+    @jrv ||=
+      File.read(self.rpath('.ruby-version')).match(/(\d+\.\d+\.\d+)$/)[1]
+  end
+
+  def gems
+
+    File
+      .readlines(self.rpath('Gemfile.lock'))
+      .inject([]) { |a, l|
+        m = l.match(/^    ([^\s]+) \(([.0-9]+(-java)?)\)$/)
+        a << [ m[1], m[2] ] if m
+        a }
+  end
+
+  def gem_path(name, version)
+
+    File.join(
+      Dir.home, '.gem/jruby', jruby_version, 'gems', "#{name}-#{version}")
+  end
+
+  def copy_gems!
+
+    self.gems.each do |name, version|
+
+      self.copy_dir!(
+        self.gem_path(name, version),
+        "WEB-INF/gems/gems/#{name}-#{version}/",
+        exclude: %w[
+          test/ spec/
+          example/ examples/ sample/ samples/
+          doc/ docs/
+          benchmark/ benchmarks/ bench/
+          contrib/
+            ])
+    end
+
+    Dir[
+      O.tpath('WEB-INF/gems/gems/**/*.{md,mdown,markdown,rdoc,txt}')
+    ].each do |pa|
+      next if pa.match(/\/license/i)
+      echo "      . rm     #{C.gray(pa)}"
+      FileUtils.rm(pa) unless self.dry?
+    end
+      #
+    echo "    . cleaned WEB-INF/gems/"
+  end
+
   def manifest!
 
     pa = self.tpath('META-INF/MANIFEST.MF')
@@ -214,6 +263,7 @@ O.copy_file!('Gemfile.lock', 'WEB-INF/')
 O.copy_file?('VERSION.txt', 'WEB-INF/')
 O.copy_file?('MIGLEVEL.txt', 'WEB-INF/')
 O.copy_file!(__FILE__.absolute, 'WEB-INF/config/')
+# TODO second file in WEB-INF/config/ ???
 
 #O.copy_dir!('app', 'WEB-INF/app/')
 O.copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
@@ -222,8 +272,7 @@ O.copy_dir!('lib', 'WEB-INF/lib/')
 
 O.copy_dir!('flor', 'WEB-INF/flor/') # too specific...
 
-# [ ] gems/
-# [ ] gems/ cleanup
+O.copy_gems!
 
 O.manifest!
 O.jar!
