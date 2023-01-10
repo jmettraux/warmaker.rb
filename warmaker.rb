@@ -170,6 +170,17 @@ class << O
     end
   end
 
+  def copy_config_ru!
+
+    return if Dir[O.tpath('**/config.ru')].any?
+
+    Dir[O.rpath('**/config.ru')].take(1).each do |pa|
+      self.copy_file!(pa, 'WEB-INF/')
+    end
+
+    echo "  . ensured WEB-INF/config.ru is present"
+  end
+
   def jruby_version
 
     @jrv ||=
@@ -281,17 +292,17 @@ O.copy_file!('Gemfile.lock', 'WEB-INF/')
 O.copy_file?('VERSION.txt', 'WEB-INF/')
 O.copy_file?('MIGLEVEL.txt', 'WEB-INF/')
 O.copy_file!(__FILE__.absolute, 'WEB-INF/config/')
-# TODO second file in WEB-INF/config/ ???
+  # TODO second file in WEB-INF/config/ ???
 
 #O.copy_dir!('app', 'WEB-INF/app/')
 O.copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
-
 O.copy_dir!('lib', 'WEB-INF/lib/')
 
 O.copy_dir!('flor', 'WEB-INF/flor/') # too specific...
 
-O.copy_gems!
+O.copy_config_ru!
 
+O.copy_gems!
 O.move_jars!
 
 O.manifest!
