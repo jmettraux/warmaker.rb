@@ -219,6 +219,22 @@ class << O
     echo "    . cleaned WEB-INF/gems/"
   end
 
+    # |-- jruby-core-9.2.5.0-complete.jar 14M
+    # |-- jruby-rack-1.1.21.jar 261K
+    # |-- jruby-stdlib-9.2.5.0.jar 10M
+    #
+  def move_jars!
+
+    tp = O.tpath('WEB-INF/lib/')
+
+    Dir[O.tpath('WEB-INF/gems/gems/**/jruby-*.jar')].each do |pa|
+      system("mv #{pa} #{tp}") unless self.dry?
+      echo "      . mv    #{C.gray(pa.hpath)} --> #{C.gray('WEB-INF/lib/')}"
+    end
+
+    echo "    . moved jars"
+  end
+
   def manifest!
 
     pa = self.tpath('META-INF/MANIFEST.MF')
@@ -239,6 +255,8 @@ class << O
   def jar!
 
     return if self.nojar?
+
+    FileUtils.rm_f(self.fname) unless self.dry?
 
     c = "jar --create --file #{self.fname} -C #{self.tmpdir} ."
     system(c) unless self.dry?
@@ -273,6 +291,8 @@ O.copy_dir!('lib', 'WEB-INF/lib/')
 O.copy_dir!('flor', 'WEB-INF/flor/') # too specific...
 
 O.copy_gems!
+
+O.move_jars!
 
 O.manifest!
 O.jar!
