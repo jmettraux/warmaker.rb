@@ -2,7 +2,12 @@
 #
 # warmaker.rb
 
+
 VERSION = '1.0.0'.freeze
+
+
+require 'open3'
+
 
 def print_usage
 
@@ -283,6 +288,37 @@ def jar!
   echo ". #{c}"
 end
 
+def callback!
+
+  echo "  . callbacks..."
+
+  [
+
+    'make warmaker_callback',
+    'warmaker_callback.sh',
+
+  ].each do |cmd|
+
+    _, _, x = Open3.capture3(cmd, chdir: O.rootdir)
+    return if x.exitstatus == 0
+
+    echo "    . #{C.dg(cmd)} #{C.gn('failed')} #{C.dg}(#{x.exitstatus})"
+  end
+
+#  stdout = $stdout
+#  stderr = $stderr
+#  devnull = File.open('/dev/null', 'wb')
+#  $stdout, $stderr = devnull, devnull
+#
+#  Dir.chdir(O.rootdir) do
+#    system("make warmaker_callback 2>&1 > /dev/null")
+#  end
+#
+#ensure
+#  $stdout, $stderr = stdout, stderr
+#  devnull.close
+end
+
 
 #
 # make the .war
@@ -313,8 +349,8 @@ copy_config_ru!
 copy_gems!
 move_jars!
 
+callback!
+
 manifest!
 jar!
-
-# [ ] WEB-INF/gems/specifications/
 
