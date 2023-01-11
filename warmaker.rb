@@ -288,36 +288,16 @@ def jar!
   echo ". #{c}"
 end
 
-def callback!
-
-  echo "  . callbacks..."
-
-  [
-
-    'make warmaker_callback',
-    'warmaker_callback.sh',
-
-  ].each do |cmd|
-
-    _, _, x = Open3.capture3(cmd, chdir: O.rootdir)
-    return if x.exitstatus == 0
-
-    echo "    . #{C.dg(cmd)} #{C.gn('failed')} #{C.dg}(#{x.exitstatus})"
-  end
-
-#  stdout = $stdout
-#  stderr = $stderr
-#  devnull = File.open('/dev/null', 'wb')
-#  $stdout, $stderr = devnull, devnull
+#def sh!(cmd, opts={})
 #
-#  Dir.chdir(O.rootdir) do
-#    system("make warmaker_callback 2>&1 > /dev/null")
-#  end
+#  opts[:chdir] ||= O.rootdir
 #
-#ensure
-#  $stdout, $stderr = stdout, stderr
-#  devnull.close
-end
+#  _, _, x = Open3.capture3(cmd, opts)
+#  x = x.exitstatus
+#  echo "  . sh! #{C.dg(cmd)} --> #{C.dg(x)}"
+#
+#  x == 0
+#end
 
 
 #
@@ -349,7 +329,10 @@ copy_config_ru!
 copy_gems!
 move_jars!
 
-callback!
+require rpath('lib/sg/version.rb'); Dir.chdir(O.rootdir) { Sg.dump_versions }
+echo "  . dumped #{C.dg}VERSION.txt #{C.gn}and #{C.dg}MIGLEVEL.txt"
+copy_file!('VERSION.txt', 'WEB-INF/')
+copy_file!('MIGLEVEL.txt', 'WEB-INF/')
 
 manifest!
 jar!
