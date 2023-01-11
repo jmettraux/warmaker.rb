@@ -319,15 +319,13 @@ mkdir!('WEB-INF')
 copy_dir!('public', '.')
 #copy_dir!('public', '.', exclude: %w[ test/ ])
 
-copy_file!('webinf/web.xml', 'WEB-INF/')
-  # FIXME webinf no liky-lah :-(
-
 copy_file!('Gemfile', 'WEB-INF/')
 copy_file!('Gemfile.lock', 'WEB-INF/')
 copy_file?('VERSION.txt', 'WEB-INF/')
 copy_file?('MIGLEVEL.txt', 'WEB-INF/')
+
+copy_file!('config/web.xml', 'WEB-INF/')
 copy_file!(__FILE__.absolute, 'WEB-INF/config/')
-  # TODO second file in WEB-INF/config/ ???
 
 #copy_dir!('app', 'WEB-INF/app/')
 copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
