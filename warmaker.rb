@@ -310,6 +310,7 @@ mkdir!('WEB-INF')
 #O.copy_dir!('public', '.', exclude: %w[ test/ ])
 
 copy_file!('webinf/web.xml', 'WEB-INF/')
+  # FIXME webinf no liky-lah :-(
 
 copy_file!('Gemfile', 'WEB-INF/')
 copy_file!('Gemfile.lock', 'WEB-INF/')
@@ -323,6 +324,9 @@ copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
 copy_dir!('lib', 'WEB-INF/lib/')
 
 copy_dir!('flor', 'WEB-INF/flor/') # too specific...
+
+copy_file!('fixtures/development/ldap.rb', 'WEB-INF/fixtures/development/')
+copy_dir!('pdfs/', 'WEB-INF/pdfs/')
 
 copy_config_ru!
 
