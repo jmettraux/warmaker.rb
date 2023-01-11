@@ -174,6 +174,15 @@ def copy_dir!(source, target, opts={})
   end
 end
 
+def copy_files!(source, target)
+
+  sc = rpath(source)
+
+  Dir.glob(sc).each do |pa1|
+    copy_file!(pa1, target)
+  end
+end
+
 def copy_config_ru!
 
   return if Dir[tpath('**/config.ru')].any?
@@ -307,7 +316,8 @@ mkdir!(O.tmpdir)
 
 mkdir!('WEB-INF')
 
-#O.copy_dir!('public', '.', exclude: %w[ test/ ])
+copy_dir!('public', '.')
+#copy_dir!('public', '.', exclude: %w[ test/ ])
 
 copy_file!('webinf/web.xml', 'WEB-INF/')
   # FIXME webinf no liky-lah :-(
@@ -321,6 +331,7 @@ copy_file!(__FILE__.absolute, 'WEB-INF/config/')
 
 #copy_dir!('app', 'WEB-INF/app/')
 copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
+
 copy_dir!('lib', 'WEB-INF/lib/')
 
 copy_dir!('flor', 'WEB-INF/flor/') # too specific...
