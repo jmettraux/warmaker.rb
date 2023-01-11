@@ -103,208 +103,207 @@ class String
   end
 end
 
-class << O
+#class << O
+def tpath(pa)
 
-  def tpath(pa)
+  pa.absolute? ? pa : File.join(O.tmpdir, pa).absolute
+end
 
-    pa.absolute? ? pa : File.join(O.tmpdir, pa).absolute
+def rpath(pa)
+
+  pa.absolute? ? pa : File.join(O.rootdir, pa).absolute
+end
+
+def mkdir!(pa)
+
+  d = tpath(pa)
+
+  return if File.exist?(d)
+
+  FileUtils.mkdir_p(d) unless O.dry?
+
+  echo "  . mkdir  #{C.gray(d.hpath)}"
+end
+
+def copy_file!(source, target, opts={})
+
+  sc = rpath(source)
+  ta = tpath(target)
+
+  mkdir!(ta)
+
+  ta = ta + '/' unless ta.match?(/\/$/)
+
+  if ! File.exist?(sc) && opts[:soft]
+
+    echo "#{C.gray}    . cp     #{sc.hpath} --> #{ta.tpath}"
+  else
+
+    FileUtils.copy(sc, ta) unless O.dry?
+
+    echo "    . cp     #{C.gray(sc.hpath)} --> #{C.gray(ta.tpath)}"
   end
+end
 
-  def rpath(pa)
+def copy_file?(source, target, opts={})
 
-    pa.absolute? ? pa : File.join(O.rootdir, pa).absolute
-  end
+  copy_file!(source, target, opts.merge(soft: true))
+end
 
-  def mkdir!(pa)
+def copy_dir!(source, target, opts={})
 
-    d = self.tpath(pa)
+  sc = rpath(source)
+  ta = tpath(target)
+  ex = (opts[:exclude] || []).collect { |e| File.join(sc, e) }
 
-    return if File.exist?(d)
+  Dir.glob(File.join(sc, '*')).each do |pa1|
 
-    FileUtils.mkdir_p(d) unless self.dry?
+    next if ex.find { |e| pa1.same_path?(e) }
 
-    echo "  . mkdir  #{C.gray(d.hpath)}"
-  end
-
-  def copy_file!(source, target, opts={})
-
-    sc = self.rpath(source)
-    ta = self.tpath(target)
-
-    self.mkdir!(ta)
-
-    ta = ta + '/' unless ta.match?(/\/$/)
-
-    if ! File.exist?(sc) && opts[:soft]
-
-      echo "#{C.gray}    . cp     #{sc.hpath} --> #{ta.tpath}"
+    if File.directory?(pa1)
+      tdir = File.join(ta, pa1[sc.length + 1..-1])
+      copy_dir!(pa1, tdir)
     else
-
-      FileUtils.copy(sc, ta) unless self.dry?
-
-      echo "    . cp     #{C.gray(sc.hpath)} --> #{C.gray(ta.tpath)}"
+      copy_file!(pa1, ta)
     end
   end
+end
 
-  def copy_file?(source, target, opts={})
+def copy_config_ru!
 
-    self.copy_file!(source, target, opts.merge(soft: true))
+  return if Dir[tpath('**/config.ru')].any?
+
+  Dir[rpath('**/config.ru')].take(1).each do |pa|
+    copy_file!(pa, 'WEB-INF/')
   end
 
-  def copy_dir!(source, target, opts={})
+  echo "  . ensured WEB-INF/config.ru is present"
+end
 
-    sc = self.rpath(source)
-    ta = self.tpath(target)
-    ex = (opts[:exclude] || []).collect { |e| File.join(sc, e) }
+def jruby_version
 
-    Dir.glob(File.join(sc, '*')).each do |pa1|
+  @jrv ||= File.read(rpath('.ruby-version')).match(/(\d+\.\d+\.\d+)$/)[1]
+end
 
-      next if ex.find { |e| pa1.same_path?(e) }
+def gems
 
-      if File.directory?(pa1)
-        tdir = File.join(ta, pa1[sc.length + 1..-1])
-        self.copy_dir!(pa1, tdir)
-      else
-        self.copy_file!(pa1, ta)
-      end
-    end
+  File
+    .readlines(rpath('Gemfile.lock'))
+    .inject([]) { |a, l|
+      m = l.match(/^    ([^\s]+) \(([.0-9]+(-java)?)\)$/)
+      a << [ m[1], m[2] ] if m
+      a }
+end
+
+def gem_path(name, version)
+
+  File.join(
+    Dir.home, '.gem/jruby', jruby_version, 'gems', "#{name}-#{version}")
+end
+
+def copy_gems!
+
+  gems.each do |name, version|
+
+    copy_dir!(
+      gem_path(name, version),
+      "WEB-INF/gems/gems/#{name}-#{version}/",
+      exclude: %w[
+        test/ spec/
+        example/ examples/ sample/ samples/
+        doc/ docs/
+        benchmark/ benchmarks/ bench/
+        contrib/
+          ])
   end
 
-  def copy_config_ru!
-
-    return if Dir[O.tpath('**/config.ru')].any?
-
-    Dir[O.rpath('**/config.ru')].take(1).each do |pa|
-      self.copy_file!(pa, 'WEB-INF/')
-    end
-
-    echo "  . ensured WEB-INF/config.ru is present"
+  Dir[
+    tpath('WEB-INF/gems/gems/**/*.{md,mdown,markdown,rdoc,txt}')
+  ].each do |pa|
+    next if pa.match(/\/license/i)
+    echo "      . rm     #{C.gray(pa)}"
+    FileUtils.rm(pa) unless O.dry?
   end
-
-  def jruby_version
-
-    @jrv ||=
-      File.read(self.rpath('.ruby-version')).match(/(\d+\.\d+\.\d+)$/)[1]
-  end
-
-  def gems
-
-    File
-      .readlines(self.rpath('Gemfile.lock'))
-      .inject([]) { |a, l|
-        m = l.match(/^    ([^\s]+) \(([.0-9]+(-java)?)\)$/)
-        a << [ m[1], m[2] ] if m
-        a }
-  end
-
-  def gem_path(name, version)
-
-    File.join(
-      Dir.home, '.gem/jruby', jruby_version, 'gems', "#{name}-#{version}")
-  end
-
-  def copy_gems!
-
-    self.gems.each do |name, version|
-
-      self.copy_dir!(
-        self.gem_path(name, version),
-        "WEB-INF/gems/gems/#{name}-#{version}/",
-        exclude: %w[
-          test/ spec/
-          example/ examples/ sample/ samples/
-          doc/ docs/
-          benchmark/ benchmarks/ bench/
-          contrib/
-            ])
-    end
-
-    Dir[
-      O.tpath('WEB-INF/gems/gems/**/*.{md,mdown,markdown,rdoc,txt}')
-    ].each do |pa|
-      next if pa.match(/\/license/i)
-      echo "      . rm     #{C.gray(pa)}"
-      FileUtils.rm(pa) unless self.dry?
-    end
-      #
-    echo "    . cleaned WEB-INF/gems/"
-  end
-
-    # |-- jruby-core-9.2.5.0-complete.jar 14M
-    # |-- jruby-rack-1.1.21.jar 261K
-    # |-- jruby-stdlib-9.2.5.0.jar 10M
     #
-  def move_jars!
+  echo "    . cleaned WEB-INF/gems/"
+end
 
-    tp = O.tpath('WEB-INF/lib/')
+  # |-- jruby-core-9.2.5.0-complete.jar 14M
+  # |-- jruby-rack-1.1.21.jar 261K
+  # |-- jruby-stdlib-9.2.5.0.jar 10M
+  #
+def move_jars!
 
-    Dir[O.tpath('WEB-INF/gems/gems/**/jruby-*.jar')].each do |pa|
-      system("mv #{pa} #{tp}") unless self.dry?
-      echo "      . mv    #{C.gray(pa.hpath)} --> #{C.gray('WEB-INF/lib/')}"
+  tp = tpath('WEB-INF/lib/')
+
+  Dir[tpath('WEB-INF/gems/gems/**/jruby-*.jar')].each do |pa|
+    system("mv #{pa} #{tp}") unless O.dry?
+    echo "      . mv    #{C.gray(pa.hpath)} --> #{C.gray('WEB-INF/lib/')}"
+  end
+
+  echo "    . moved jars"
+end
+
+def manifest!
+
+  pa = tpath('META-INF/MANIFEST.MF')
+
+  unless O.dry?
+
+    mkdir!('META-INF')
+
+    File.open(pa, 'wb') do |f|
+      f.puts "Manifest-Version: 1.0"
+      f.puts "Created-By: warmaker.rb #{VERSION}"
     end
-
-    echo "    . moved jars"
   end
 
-  def manifest!
+  echo "  . wrote  #{C.gray(pa.tpath)}"
+end
 
-    pa = self.tpath('META-INF/MANIFEST.MF')
+def jar!
 
-    unless self.dry?
+  return if O.nojar?
 
-      self.mkdir!('META-INF')
+  FileUtils.rm_f(O.fname) unless O.dry?
 
-      File.open(pa, 'wb') do |f|
-        f.puts "Manifest-Version: 1.0"
-        f.puts "Created-By: warmaker.rb #{VERSION}"
-      end
-    end
-
-    echo "  . wrote  #{C.gray(pa.tpath)}"
-  end
-
-  def jar!
-
-    return if self.nojar?
-
-    FileUtils.rm_f(self.fname) unless self.dry?
-
-    c = "jar --create --file #{self.fname} -C #{self.tmpdir} ."
-    system(c) unless self.dry?
-    echo ". #{c}"
-  end
+  c = "jar --create --file #{O.fname} -C #{O.tmpdir} ."
+  system(c) unless O.dry?
+  echo ". #{c}"
 end
 
 
 #
 # make the .war
 
-O.mkdir!(O.tmpdir)
+mkdir!(O.tmpdir)
 
-O.mkdir!('WEB-INF')
+mkdir!('WEB-INF')
 
 #O.copy_dir!('public', '.', exclude: %w[ test/ ])
 
-O.copy_file!('webinf/web.xml', 'WEB-INF/')
+copy_file!('webinf/web.xml', 'WEB-INF/')
 
-O.copy_file!('Gemfile', 'WEB-INF/')
-O.copy_file!('Gemfile.lock', 'WEB-INF/')
-O.copy_file?('VERSION.txt', 'WEB-INF/')
-O.copy_file?('MIGLEVEL.txt', 'WEB-INF/')
-O.copy_file!(__FILE__.absolute, 'WEB-INF/config/')
+copy_file!('Gemfile', 'WEB-INF/')
+copy_file!('Gemfile.lock', 'WEB-INF/')
+copy_file?('VERSION.txt', 'WEB-INF/')
+copy_file?('MIGLEVEL.txt', 'WEB-INF/')
+copy_file!(__FILE__.absolute, 'WEB-INF/config/')
   # TODO second file in WEB-INF/config/ ???
 
-#O.copy_dir!('app', 'WEB-INF/app/')
-O.copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
-O.copy_dir!('lib', 'WEB-INF/lib/')
+#copy_dir!('app', 'WEB-INF/app/')
+copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
+copy_dir!('lib', 'WEB-INF/lib/')
 
-O.copy_dir!('flor', 'WEB-INF/flor/') # too specific...
+copy_dir!('flor', 'WEB-INF/flor/') # too specific...
 
-O.copy_config_ru!
+copy_config_ru!
 
-O.copy_gems!
-O.move_jars!
+copy_gems!
+move_jars!
 
-O.manifest!
-O.jar!
+manifest!
+jar!
+
+# [ ] WEB-INF/gems/specifications/
 
