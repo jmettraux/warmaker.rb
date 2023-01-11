@@ -201,6 +201,13 @@ def gem_path(name, version)
     Dir.home, '.gem/jruby', jruby_version, 'gems', "#{name}-#{version}")
 end
 
+def gem_specification_path(name, version)
+
+  File.join(
+    Dir.home,
+    '.gem/jruby', jruby_version, 'specifications', "#{name}-#{version}.gemspec")
+end
+
 def copy_gems!
 
   gems.each do |name, version|
@@ -215,6 +222,10 @@ def copy_gems!
         benchmark/ benchmarks/ bench/
         contrib/
           ])
+
+    copy_file!(
+      gem_specification_path(name, version),
+      'WEB-INF/gems/specifications/')
   end
 
   Dir[
