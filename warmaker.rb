@@ -128,7 +128,6 @@ class String
 end
 
 
-#class << O
 def tpath(pa)
 
   pa.absolute? ? pa : File.join(O.tmpdir, pa).absolute
@@ -345,6 +344,50 @@ def jar!
   echo ". #{c}"
 end
 
+# commit 08f952c8ab37644d9117b06893a1687aeac97a (HEAD,tag:refs/tags/v3.0.5b)
+# Author: John Mettraux <jmettraux@gmail.com>
+# Date:   Wed Sep 7 15:58:49 2016 +0900
+#
+#     disable smtp authentication for uat
+#
+def git_version
+
+  s, _, x = sh!('git log -1 --decorate=full')
+
+  return nil if s.match?(/Not a git repository/)
+
+  co = s.match(/commit\s+([0-9a-fA-F]+)/)[1]
+  au = s.match(/uthor:\s+([^\n]+)/)[1]
+  da = s.match(/ate:\s+([^\n]+)/)[1]
+
+  tas =
+    s.match(/(?:tag: refs\/tags\/([^,)]+))(?:, tag: refs\/tags\/([^,)]+))*/)
+  tas =
+    tas ? tas[1..-1].compact.join(', ') : 'no tag'
+
+  [ co, au, da, tas ].compact.join(' / ')
+end
+
+def migration_level
+
+  s, _, x = sh!("grep -E '(create|alter|add)_' migrations/*.rb | wc -l")
+
+  s = x == 0 ? s.to_i : nil
+end
+
+def dump_versions!
+
+  fn = File.join(O.tmpdir, 'VERSION.txt')
+  File.open(fn, 'wb') { |f| f.puts(git_version) }
+
+  echo "  . wrote #{C.gray(fn.tpath)}"
+
+  fn = File.join(O.tmpdir, 'MIGLEVEL.txt')
+  File.open(fn, 'wb') { |f| f.puts(migration_level) }
+
+  echo "  . wrote #{C.gray(fn.tpath)}"
+end
+
 
 #
 # make the .war
@@ -358,8 +401,6 @@ copy_dir!('public', '.')
 
 copy_file!('Gemfile', 'WEB-INF/')
 copy_file!('Gemfile.lock', 'WEB-INF/')
-copy_file?('VERSION.txt', 'WEB-INF/')
-copy_file?('MIGLEVEL.txt', 'WEB-INF/')
 
 copy_file!('config/web.xml', 'WEB-INF/')
 copy_file!(__FILE__.absolute, 'WEB-INF/config/')
@@ -379,10 +420,7 @@ copy_config_ru!
 copy_gems!
 move_jars!
 
-require rpath('lib/sg/version.rb'); Dir.chdir(O.rootdir) { Sg.dump_versions }
-echo "  . dumped #{C.dg}VERSION.txt #{C.gn}and #{C.dg}MIGLEVEL.txt"
-copy_file!('VERSION.txt', 'WEB-INF/')
-copy_file!('MIGLEVEL.txt', 'WEB-INF/')
+dump_versions!
 
 manifest!
 jar!
