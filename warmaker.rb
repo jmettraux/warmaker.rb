@@ -5,6 +5,10 @@
 
 VERSION = '1.0.0'.freeze
 
+GEM_COMMAND = Dir['/usr/local/bin/gem*']
+  .select { |pa| pa.match?(/\/gem\d+$/) }
+  .sort
+  .last
 
 require 'open3'
 
@@ -217,19 +221,37 @@ end
 
 def gem_specification_path(name, version)
 
+  nv = "#{name}-#{version}"
+
   pa0 = File.join(
-    Dir.home,
-    '.gem/jruby', jruby_version, 'specifications', "#{name}-#{version}.gemspec")
+    Dir.home, '.gem/jruby', jruby_version, 'specifications', "#{nv}.gemspec")
 
   return pa0 if File.exist?(pa0)
 
-  pa1 = Dir[File.join(Dir.home, ".gem/jruby/**/#{name}-#{version}.gemspec")]
+  pa1 = Dir[File.join(Dir.home, ".gem/jruby/**/#{nv}.gemspec")]
     .sort
     .last
 
   return pa1 if pa1
 
-  fail "did not find #{name}-#{version}.gemspec..."
+  tmpdir = "#{O.tmpdir}_tmp"
+  FileUtils.mkdir_p(tmpdir)
+
+  gempath =
+    Dir[File.join(Dir.home, '.gem/jruby', jruby_version, "cache/#{nv}.gem")]
+      .last
+  gemname =
+    File.basename(gempath)
+
+  FileUtils.cp(gempath, tmpdir)
+
+  system("#{GEM_COMMAND} unpack #{gemname}", chdir: tmpdir)
+
+  tn = File.join(tmpdir, "#{nv}.gemspec")
+
+  FileUtils.cp(File.join(tmpdir, nv, "#{name}.gemspec"), tn)
+
+  tn
 end
 
 def copy_gems!
