@@ -88,6 +88,21 @@ def echo(s)
   print C.green; print s; puts C.reset
 end
 
+def sh!(cmd, opts={})
+
+  opts[:chdir] ||= O.rootdir
+
+  sout, serr, x =
+    O.dry? ? [ '', '', 0 ] :
+    Open3.capture3(cmd, opts)
+
+  x = x.exitstatus if x.respond_to?(:exitstatus)
+
+  echo "  . sh! #{C.dg(cmd)} --> #{C.dg(x)}"
+
+  [ sout, serr, x ]
+end
+
 
 class String
 
@@ -111,6 +126,7 @@ class String
     self.absolute == s.absolute
   end
 end
+
 
 #class << O
 def tpath(pa)
@@ -245,7 +261,7 @@ def gem_specification_path(name, version)
 
   FileUtils.cp(gempath, tmpdir)
 
-  system("#{GEM_COMMAND} unpack #{gemname}", chdir: tmpdir)
+  sh!("#{GEM_COMMAND} unpack #{gemname}", chdir: tmpdir)
 
   tn = File.join(tmpdir, "#{nv}.gemspec")
 
@@ -328,17 +344,6 @@ def jar!
   system(c) unless O.dry?
   echo ". #{c}"
 end
-
-#def sh!(cmd, opts={})
-#
-#  opts[:chdir] ||= O.rootdir
-#
-#  _, _, x = Open3.capture3(cmd, opts)
-#  x = x.exitstatus
-#  echo "  . sh! #{C.dg(cmd)} --> #{C.dg(x)}"
-#
-#  x == 0
-#end
 
 
 #
