@@ -217,9 +217,19 @@ end
 
 def gem_specification_path(name, version)
 
-  File.join(
+  pa0 = File.join(
     Dir.home,
     '.gem/jruby', jruby_version, 'specifications', "#{name}-#{version}.gemspec")
+
+  return pa0 if File.exist?(pa0)
+
+  pa1 = Dir[File.join(Dir.home, ".gem/jruby/**/#{name}-#{version}.gemspec")]
+    .sort
+    .last
+
+  return pa1 if pa1
+
+  fail "did not find #{name}-#{version}.gemspec..."
 end
 
 def copy_gems!
@@ -334,7 +344,7 @@ copy_dir!('lib', 'WEB-INF/lib/')
 
 copy_dir!('flor', 'WEB-INF/flor/') # too specific...
 
-copy_file!('fixtures/development/ldap.rb', 'WEB-INF/fixtures/development/')
+copy_file?('fixtures/development/ldap.rb', 'WEB-INF/fixtures/development/')
 copy_dir!('pdfs/', 'WEB-INF/pdfs/')
 
 copy_config_ru!
