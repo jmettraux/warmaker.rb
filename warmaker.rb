@@ -282,6 +282,7 @@ def copy_gems!
         doc/ docs/
         benchmark/ benchmarks/ bench/
         contrib/
+        ext/
           ])
 
     copy_file!(
