@@ -218,14 +218,67 @@ def jruby_version
   @jrv ||= File.read(rpath('.ruby-version')).match(/(\d+\.\d+\.\d+)$/)[1]
 end
 
+class Dep
+  attr_reader :name, :version, :ups, :downs
+  attr_accessor :group
+  def initialize(name, version=nil)
+    @name = name
+    @version = version
+    @ups = []
+    @downs = []
+  end
+  def top?
+    @version != nil
+  end
+  def inspect
+    version = @version ? ' ' + @version : ''
+    group = " g:#{@group}"
+    ups = @ups.any? ? ' u:' + @ups.collect(&:name).join(',') : ''
+    downs = @downs.any? ? ' d:' + @downs.collect(&:name).join(',') : ''
+    "<Dep #{name}#{version}#{group}#{ups}#{downs} c?:#{core?}>"
+  end
+  def core?
+    return @group == nil if @ups.empty?
+    !! @ups.find(&:core?)
+  end
+  def to_a
+    [ name, version ]
+  end
+end
+
 def gems
 
-  File
-    .readlines(rpath('Gemfile.lock'))
-    .inject([]) { |a, l|
-      m = l.match(/^    ([^\s]+) \(([.0-9]+(-java)?)\)$/)
-      a << [ m[1], m[2] ] if m
-      a }
+  deps = File.readlines(rpath('Gemfile.lock'))
+    .select { |l| l.match?(/^     *[-_a-z]+ \(/) }
+    .collect { |l|
+      m = l.match(/^(\s+)([-_a-z]+) \(([^)]+)\)/)
+      m[1].length == 4 ? Dep.new(m[2], m[3]) : Dep.new(m[2]) }
+  curr = nil
+  deps = deps
+    .each { |dep|
+      if dep.top?
+        curr = dep
+      else
+        curr.downs << dep
+      end }
+    .select(&:top?)
+  deph = deps.inject({}) { |h, dep| h[dep.name] = dep; h }
+  deps.each { |dep| dep.downs.each { |d| deph[d.name].ups << dep } }
+
+  group = nil
+    #
+  File.readlines(rpath('Gemfile')).each do |l|
+    if m = l.match(/^\s*gem\s['"]([^'"]+)['"]/)
+      #(groups[group] ||= []) << m[1]
+      deph[m[1]].group = group
+    elsif m = l.match(/^\s*group\s+:([a-z]+)/)
+      group = m[1].to_sym
+    end
+  end
+
+  deps
+    .select(&:core?)
+    .collect(&:to_a)
 end
 
 def gem_path(name, version)
@@ -283,6 +336,7 @@ def copy_gems!
         benchmark/ benchmarks/ bench/
         contrib/
         ext/
+        Rakefile
           ])
 
     copy_file!(
