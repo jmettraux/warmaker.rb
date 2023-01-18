@@ -492,7 +492,6 @@ copy_dir!('lib', 'WEB-INF/lib/')
 copy_dir?('etc', 'WEB-INF/etc/')
 copy_dir?('flor', 'WEB-INF/flor/')
 copy_files?('test/fixtures/fake_*.rb', 'WEB-INF/test/fixtures/')
-exit 1
 
 copy_file?('fixtures/development/ldap.rb', 'WEB-INF/fixtures/development/')
 copy_dir!('pdfs/', 'WEB-INF/pdfs/')
