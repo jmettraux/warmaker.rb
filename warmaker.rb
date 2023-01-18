@@ -193,6 +193,15 @@ def copy_dir!(source, target, opts={})
   end
 end
 
+def copy_dir?(source, target, opts={})
+
+  if File.directory?(rpath(source))
+    copy_dir!(source, target, opts)
+  else
+    # echo ?
+  end
+end
+
 def copy_files!(source, target)
 
   sc = rpath(source)
@@ -465,7 +474,8 @@ copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
 
 copy_dir!('lib', 'WEB-INF/lib/')
 
-copy_dir!('flor', 'WEB-INF/flor/') # too specific...
+copy_dir?('etc', 'WEB-INF/etc/')
+copy_dir?('flor', 'WEB-INF/flor/')
 
 copy_file?('fixtures/development/ldap.rb', 'WEB-INF/fixtures/development/')
 copy_dir!('pdfs/', 'WEB-INF/pdfs/')
