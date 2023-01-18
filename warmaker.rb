@@ -501,6 +501,8 @@ copy_config_ru!
 copy_gems!
 move_jars!
 
+copy_files?(File.join(__dir__, 'jruby-rack-*.jar'), 'WEB-INF/lib/')
+
 dump_versions!
 
 manifest!
