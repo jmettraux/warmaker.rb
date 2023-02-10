@@ -14,7 +14,8 @@ jrack:
 	mkdir $(JRACK)_jar
 	cd $(JRACK)_jar && jar xvf ../$(JRACK)/lib/$(JRACK).jar
 	rm -fR $(JRACK)_jar/vendor/
-	echo 'Gem.paths=(ENV) # warmaker.rb ;-)' | cat - $(JRACK)_jar/jruby/rack/rack_ext.rb > tmp.rb
+	echo 'require "pp"; puts "+" * 80; puts __FILE__; pp ENV; puts "+" * 80; Gem.paths=(ENV) # warmaker.rb ;-)' | \
+      cat - $(JRACK)_jar/jruby/rack/rack_ext.rb > tmp.rb
 	mv tmp.rb $(JRACK)_jar/jruby/rack/rack_ext.rb
 	cd $(JRACK)_jar && jar cvf ../$(JRACK).jar .
 
