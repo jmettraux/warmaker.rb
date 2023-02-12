@@ -484,6 +484,8 @@ copy_file!('Gemfile.lock', 'WEB-INF/')
 copy_file!('config/web.xml', 'WEB-INF/')
 copy_file!(__FILE__.absolute, 'WEB-INF/config/')
 
+copy_file?('config/logging.properties', 'WEB-INF/classes/')
+
 #copy_dir!('app', 'WEB-INF/app/')
 copy_dir!('app', 'WEB-INF/app/', exclude: %w[ views/ ])
 
