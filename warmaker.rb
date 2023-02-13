@@ -10,6 +10,8 @@ GEM_COMMAND = Dir['/usr/local/bin/gem*']
   .sort
   .last
 
+OPTIONAL_GEMS = %w[ timeout ].freeze
+
 require 'open3'
 
 
@@ -363,9 +365,19 @@ def copy_gems!
         Rakefile
           ])
 
-    copy_file!(
-      gem_specification_path(name, version),
-      'WEB-INF/gems/specifications/')
+    path =
+      begin
+        gem_specification_path(name, version)
+      rescue => err
+        if OPTIONAL_GEMS.include?(name)
+          echo "    . ignoring missing #{C.gray(name + ' ' + version)}"
+        else
+          echo "    . NOT ignoring missing #{C.gray(name + ' ' + version)}"
+          raise
+        end
+      end
+
+    copy_file!(path, 'WEB-INF/gems/specifications/') if path
   end
 
   Dir[
