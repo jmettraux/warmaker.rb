@@ -275,9 +275,9 @@ end
 def gems
 
   deps = File.readlines(rpath('Gemfile.lock'))
-    .select { |l| l.match?(/^     *[-_a-z]+ \(/) }
+    .select { |l| l.match?(/^     *[-_a-z0-9]+ \(/) }
     .collect { |l|
-      m = l.match(/^(\s+)([-_a-z]+) \(([^)]+)\)/)
+      m = l.match(/^(\s+)([-_a-z0-9]+) \(([^)]+)\)/)
       m[1].length == 4 ? Dep.new(m[2], m[3]) : Dep.new(m[2]) }
   curr = nil
   deps = deps
