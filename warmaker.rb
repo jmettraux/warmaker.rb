@@ -11,7 +11,6 @@ GEM_COMMAND = Dir['/usr/local/bin/gem*']
   .last
 
 OPTIONAL_GEMS = %w[ timeout bigdecimal ].freeze
-NON_OPTIONAL_GEMS = %w[ diff-lcs ].freeze
 
 require 'open3'
 
@@ -273,38 +272,49 @@ class Dep
   end
 end
 
-def gems
+def top_gems
 
-  deps = File.readlines(rpath('Gemfile.lock'))
-    .select { |l| l.match?(/^     *[-_a-z0-9]+ \(/) }
-    .collect { |l|
-      m = l.match(/^(\s+)([-_a-z0-9]+) \(([^)]+)\)/)
-      m[1].length == 4 ? Dep.new(m[2], m[3]) : Dep.new(m[2]) }
-  curr = nil
-  deps = deps
-    .each { |dep|
-      if dep.top?
-        curr = dep
-      else
-        curr.downs << dep
-      end }
-    .select(&:top?)
-  deph = deps.inject({}) { |h, dep| h[dep.name] = dep; h }
-  deps.each { |dep| dep.downs.each { |d| deph[d.name].ups << dep } }
+  File.readlines(rpath('Gemfile'))
+    .select { |l| l.match?(/\Agem\s/) }
+    .collect { |l| l.split(/\s+/)[1].match(/['"]([^'"\s]+)/)[1] }
+end
 
-  group = nil
+def locked_gems
+
+  lines = File.readlines(rpath('Gemfile.lock'))
+    .select { |l| l.match?(/\A    (  )?[a-z]/) }
+
+  gems = lines
+    .select { |l|
+      l.match?(/\A    [a-z]/) }
+    .inject({}) { |h, l|
+      m = l.match(/([-_a-z0-9]+) \(([^)]+)\)\n/)
+      h[m[1]] = Dep.new(m[1], m[2])
+      h }
+
+  up = nil
     #
-  File.readlines(rpath('Gemfile')).each do |l|
-    if m = l.match(/^\s*gem\s['"]([^'"]+)['"]/)
-      #(groups[group] ||= []) << m[1]
-      deph[m[1]].group = group
-    elsif m = l.match(/^\s*group\s+:([a-z]+)/)
-      group = m[1].to_sym
+  lines.each do |line|
+    m = line.match(/\A(\s+)([-_a-z0-9]+)/)
+    if m[1].length == 4
+      up = m[2]
+    else
+      gup = gems[up]
+      gdo = gems[m[2]]
+      gup.downs << gdo
+      gdo.ups << gup
     end
   end
 
-  deps
-    .select { |dep| dep.core? || NON_OPTIONAL_GEMS.include?(dep.name) }
+  gems.values
+end
+
+def gems
+
+  tgs = top_gems
+
+  locked_gems
+    .select { |d| tgs.find { |tg| d.child_of?(tg) } }
     .collect(&:to_a)
 end
 
