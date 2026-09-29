@@ -3,14 +3,15 @@
 # warmaker.rb
 
 
-VERSION = '1.0.0'.freeze
+VERSION = '1.1.0'.freeze
 
 GEM_COMMAND = Dir['/usr/local/bin/gem*']
   .select { |pa| pa.match?(/\/gem\d+$/) }
   .sort
   .last
 
-OPTIONAL_GEMS = %w[ timeout ].freeze
+OPTIONAL_GEMS = %w[ timeout bigdecimal ].freeze
+NON_OPTIONAL_GEMS = %w[ diff-lcs ].freeze
 
 require 'open3'
 
@@ -303,7 +304,7 @@ def gems
   end
 
   deps
-    .select(&:core?)
+    .select { |dep| dep.core? || NON_OPTIONAL_GEMS.include?(dep.name) }
     .collect(&:to_a)
 end
 
@@ -381,7 +382,7 @@ def copy_gems!
   end
 
   Dir[
-    tpath('WEB-INF/gems/gems/**/*.{md,mdown,markdown,rdoc,txt}')
+    tpath('WEB-INF/gems/gems/**/*.{md,mdown,markdown,rdoc,txt,toml}')
   ].each do |pa|
     next if pa.match(/\/license/i)
     echo "      . rm     #{C.gray(pa)}"
